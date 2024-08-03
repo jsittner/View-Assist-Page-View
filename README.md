@@ -14,6 +14,10 @@ Requirements for using page view on View-Assist
     page_view: "input_text.viewscreen_page"
 
 
+3. kiosk-mode from HACS
+
+    https://github.com/maykar/kiosk-mode
+
 
 The automation changes the visibility of the different cards.
 
