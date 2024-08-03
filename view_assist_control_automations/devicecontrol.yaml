@@ -1,0 +1,207 @@
+alias: ViewAssist - Officedisplay - Pageview
+description: ""
+trigger:
+  - platform: state
+    entity_id:
+      - input_text.viewscreen_page
+    id: ModeControl
+  - platform: state
+    entity_id:
+      - sensor.viewassist_officedisplay
+    id: ModeControl
+    attribute: mode
+  - platform: event
+    event_type: timer.finished
+    event_data:
+      entity_id: timer.viewassist_officedisplay
+    id: timerend
+  - platform: state
+    entity_id:
+      - sensor.viewassist_officedisplay
+    id: Cycle
+    attribute: mode
+    to: cycle
+  - platform: homeassistant
+    event: start
+    id: startup
+  - platform: state
+    entity_id:
+      - sensor.streamassist_officedisplay_intent
+    id: intent
+  - platform: state
+    entity_id:
+      - media_player.officedisplay_2
+    id: media
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id:
+              - ModeControl
+        sequence:
+          - service: timer.start
+            data:
+              duration: "{{states[satellite].attributes.view_timeout}}"
+            target:
+              entity_id: timer.viewassist_officedisplay
+      - conditions:
+          - condition: trigger
+            id:
+              - timerend
+        sequence:
+          - if:
+              - condition: state
+                entity_id: sensor.viewassist_officedisplay
+                state: normal
+                attribute: mode
+                enabled: true
+            then:
+              - service: input_text.set_value
+                target:
+                  entity_id: "{{ page_view }}"
+                data:
+                  value: clock
+          - if:
+              - condition: state
+                entity_id: sensor.viewassist_officedisplay
+                state: music
+                attribute: mode
+                enabled: true
+            then:
+              - service: input_text.set_value
+                target:
+                  entity_id: "{{ page_view }}"
+                data:
+                  value: music
+      - conditions:
+          - condition: trigger
+            id:
+              - Cycle
+        sequence:
+          - repeat:
+              while:
+                - condition: state
+                  entity_id: sensor.viewassist_officedisplay
+                  state: cycle
+                  attribute: mode
+              sequence:
+                - repeat:
+                    for_each: "{{ state_attr (satellite,'cycle_view')}}"
+                    sequence:
+                      - if:
+                          - condition: state
+                            entity_id: sensor.viewassist_officedisplay
+                            state: cycle
+                            attribute: mode
+                        then:
+                          - service: input_text.set_value
+                            target:
+                              entity_id: "{{ page_view }}"
+                            data:
+                              value: clock
+                      - if:
+                          - condition: state
+                            entity_id: sensor.viewassist_officedisplay
+                            state: cycle
+                            attribute: mode
+                        then:
+                          - wait_for_trigger:
+                              platform: event
+                              event_type: timer.finished
+                              event_data:
+                                entity_id: timer.viewassist_office
+      - conditions:
+          - condition: trigger
+            id:
+              - startup
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ micunmute is true }}"
+            then:
+              - service: switch.turn_on
+                target:
+                  entity_id: switch.streamassist_office_mic
+                data: {}
+      - conditions:
+          - condition: trigger
+            id:
+              - intent
+        sequence:
+          - if:
+              - condition: template
+                value_template: >-
+                  {{ state_attr(intent,
+                  'intent_output')['response']['speech']['plain']['speech']  is
+                  not in "Sorry, I couldn't understand that"}}
+            then:
+              - service: python_script.set_state
+                data:
+                  entity_id: "{{ satellite }}"
+                  last_said: >-
+                    {{ state_attr(intent,
+                    'intent_output')['response']['speech']['plain']['speech']}}
+                enabled: true
+          - if:
+              - condition: template
+                value_template: >-
+                  {% if 'id' in state_attr(intent,
+                  'intent_output')['response']['data']['success'][0] %} true {%
+                  else %} false {% endif %}
+            then:
+              - service: input_text.set_value
+                target:
+                  entity_id: "{{ page_view }}"
+                data:
+                  value: entity
+          - if:
+              - condition: template
+                value_template: >-
+                  {% if 'JarvisGPT' in
+                  state_attr(intent,'intent_output')['response']['speech']['plain']['agent_name']
+                  %} true {% else %} false {% endif %}
+            then:
+              - service: python_script.set_state
+                data:
+                  entity_id: "{{ satellite }}"
+                  message: >-
+                    {{
+                    state_attr(intent,'intent_output')['response']['speech']['plain']['speech']
+                    }}
+                  enabled: true
+              - service: input_text.set_value
+                target:
+                  entity_id: "{{ page_view }}"
+                data:
+                  value: info
+      - conditions:
+          - condition: trigger
+            id:
+              - media
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: state
+                    entity_id: media_player.officedisplay_2
+                    state: "off"
+                sequence:
+                  - service: python_script.set_state
+                    data:
+                      entity_id: "{{ satellite }}"
+                      mode: normal
+                      title: ""
+                  - service: input_text.set_value
+                    target:
+                      entity_id: "{{ page_view }}"
+                    data:
+                      value: clock
+variables:
+  satellite: sensor.viewassist_officedisplay
+  dashboard: /dashboard-viewscreen
+  display: sensor.viewassist_officedisplay_browser_path
+  home: /dashboard-viewscreen/clock
+  micunmute: true
+  micdevice: switch.streamassist_officedisplay_mic
+  intent: sensor.streamassist_officedisplay_intent
+  page_view: input_text.viewscreen_page
+mode: parallel
