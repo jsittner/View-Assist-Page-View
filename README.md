@@ -22,7 +22,7 @@ Automation parts:
 ```
 - service: input_text.set_value
     data:
-      value: info
+      value: clock
     target:
       entity_id: "{{ target_display_page_view }}"
 ```
