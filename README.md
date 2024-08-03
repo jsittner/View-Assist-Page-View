@@ -15,7 +15,7 @@ Requirements for using page view on View-Assist
 
 
 
-The way it automation changes the visible page.
+The automation changes the visibility of the different cards.
 
 Automation parts:
 
