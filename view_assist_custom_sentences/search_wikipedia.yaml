@@ -1,0 +1,83 @@
+alias: View Assist - Search Wikipedia
+description: ""
+trigger:
+  - platform: conversation
+    command:
+      - (Tell me about [the] {searchterm}| search [for] {searchterm})
+      - who is {searchterm}
+condition: []
+action:
+  - variables:
+      target_satellite_device: |-
+        {% for sat in expand(group_entity) %}
+          {% if device_id(sat.attributes.mic_device)  == trigger.device_id %}
+            {{ sat.entity_id }}
+          {% endif %}
+        {% endfor %}
+      target_display_device: "{{ device_id(state_attr(target_satellite_device, 'display_device')) }}"
+      target_mediaplayer_device: "{{ state_attr(target_satellite_device, 'mediaplayer_device') }}"
+      target_display_page_view: "{{ state_attr(target_satellite_device, 'page_view') }}"
+    enabled: true
+  - service: pyscript.search_wikipedia
+    response_variable: wiki_response
+    data:
+      searchterm: "{{ trigger.slots.searchterm }}"
+  - service: python_script.set_state
+    data:
+      entity_id: "{{ target_satellite_device }}"
+      title: Wikipedia Search
+      message_font_size: 3vw
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >-
+              {% if wiki_response['thumbnail'] != None %}true{% else %}false{%
+              endif %}
+        sequence:
+          - service: python_script.set_state
+            data:
+              entity_id: "{{ target_satellite_device }}"
+              message: "{{ wiki_response['extract'] }}"
+              image: "{{ wiki_response['thumbnail'] }}"
+          - set_conversation_response: "{{ wiki_response['extract'] }}"
+            enabled: true
+          - service: browser_mod.navigate
+            data:
+              path: /dashboard-viewassist/infoview
+            target:
+              device_id: "{{target_display_device}}"
+          - service: input_text.set_value
+            metadata: {}
+            data:
+              value: infoview
+            target:
+              entity_id: "{{ target_display_page_view }}"
+      - conditions:
+          - condition: template
+            value_template: >-
+              {% if wiki_response['type'] != 'disambiguation' %}true{% else
+              %}false{% endif %}      
+        sequence:
+          - service: python_script.set_state
+            data:
+              entity_id: "{{ target_satellite_device }}"
+              message: "{{ wiki_response['extract'] }}"
+          - set_conversation_response: "{{ wiki_response['extract'] }}"
+            enabled: true
+          - service: browser_mod.navigate
+            data:
+              path: /dashboard-viewassist/info
+            target:
+              device_id: "{{target_display_device}}"
+          - service: input_text.set_value
+            metadata: {}
+            data:
+              value: info
+            target:
+              entity_id: "{{ target_display_page_view }}"
+    default:
+      - set_conversation_response: Sorry, I couldn't find anything on Wikipedia for that
+        enabled: true
+variables:
+  group_entity: group.viewassist_satellites
+mode: single

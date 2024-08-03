@@ -1,0 +1,719 @@
+kiosk_mode:
+  user_settings:
+    - users:
+        - kiosk
+      kiosk: true
+      hide_header: true
+      hide_sidebar: true
+      hide_menu_button: true
+      hide_overflow: true
+button_card_templates:
+  variable_template:
+    variables:
+      assist_group: group.viewassist_satellites
+      assist_sat: sensor.viewassist_officedisplay
+      var_weather_entity: weather.kwaedmon204
+      use_24_hour_time: false
+      default_satellite: |-
+        [[[
+          return hass.states[variables.assist_group].attributes.entity_id
+             .find((eid) => hass.states[eid].attributes.type === "view_audio")
+        ]]]
+      var_orientation: |
+        [[[ if( window.innerHeight/window.innerWidth > 1 ) 
+        return "portrait"; 
+        else return "landscape"; ]]]
+      var_current_time: |
+        [[[
+          if (variables.use_24_hour_time) {
+            var options = { hour: "2-digit", minute: "2-digit", hour12: false };
+          } else {
+            var options = { hour: "numeric", minute: "2-digit" };      
+          }
+            return new Date().toLocaleTimeString([], options).replace("AM","").replace("PM","");
+        ]]]
+      var_date_short: |
+        [[[    
+          const options = { weekday: "short", month: "short", day: "numeric", };
+          return new Date().toLocaleDateString([], options);
+        ]]]
+      var_date_long: |
+        [[[
+              const options = { weekday: "long", month: "long", day: "numeric", year: 'numeric' };
+              return new Date().toLocaleDateString([], options)
+        ]]]
+      var_assistsat_entity: |-
+        [[[
+          return variables.assist_sat
+        ]]]
+      var_assisting: |-
+        [[[
+          var assistbid = [variables.assist_sat];
+          var micdevice = hass.states[assistbid ].attributes.mic_device;
+          var micstate = hass.states[micdevice].state;
+          var assisting = micstate.includes("start");
+          return `${assisting}`
+        ]]]
+      var_mic_device: |-
+        [[[
+          var assistbid = [variables.assist_sat];
+          var micdevice = hass.states[assistbid].attributes.mic_device;
+          var micdevice = micdevice.replace("sensor","switch").replace("stt","mic");      
+          return `${micdevice}`
+        ]]]
+      var_mic_mute: |-
+        [[[
+          var assistbid = [variables.assist_sat];
+          var micdevice = hass.states[assistbid].attributes.mic_device;
+          var micdevice = micdevice.replace("sensor","switch").replace("stt","mic");      
+          var micstate = hass.states[micdevice].state;
+          return `${micstate}`
+        ]]]
+      var_mic_switch: |-
+        [[[
+          var assistbid = [variables.assist_sat];
+          var micdevice = hass.states[assistbid].attributes.mic_device;
+          var micswitch = micdevice.replace("sensor","switch").replace("stt","mic");      
+          return `${micswitch}`
+        ]]]        
+      var_mediaplayer_device: |-
+        [[[
+          var assistbid = [variables.assist_sat];
+          var mediadevice = hass.states[assistbid].attributes.mediaplayer_device;
+          return `${mediadevice}`
+        ]]]        
+      var_mediaplayer_mute: |-
+        [[[
+          var assistbid = [variables.assist_sat];
+          var mediadevice = hass.states[assistbid].attributes.mediaplayer_device;
+          var mediaplayerstate = hass.states[mediadevice].attributes.is_volume_muted;
+          return `${mediaplayerstate}`
+        ]]]
+      var_title: '[[[ return states[variables.var_assistsat_entity].attributes.title; ]]]'
+      var_message: >-
+        [[[ return states[variables.var_assistsat_entity].attributes.message;
+        ]]]
+      var_image: '[[[ return states[variables.var_assistsat_entity].attributes.image; ]]]'
+      var_font_size: >-
+        [[[ return
+        states[variables.var_assistsat_entity].attributes.message_font_size; ]]]
+      var_weather_temperature: |-
+        [[[
+          return (states[variables.var_weather_entity].attributes.temperature  + '°');  
+        ]]]      
+      var_weather_icon: |-
+        [[[
+          const weatherIconsDay  = {
+            "clear-night": "mdi:weather-night", 
+            "cloudy": "mdi:weather-cloudy",
+            "dust":"mdi:weather-dust",
+            "fog": "mdi:weather-fog",
+            "hail": "mdi:weather-hail",
+            "hazy": "mdi:weather-hazy", 
+            "hurricane": "mdi:weather-hurricane",
+            "lightning": "mdi:weather-lightning",
+            "lightning-rainy": "mdi:weather-lightning-rainy",
+            "partlycloudy": "mdi:weather-partly-cloudy",
+            "partly-lightning": "mdi:weather-partly-lightning", 
+            "partly-rainy": "mdi:weather-partly-rainy",
+            "partly-snowy": "mdi:weather-partly-snowy", 
+            "partly-snowy-rainy": "mdi:weather-partly-snowy-rainy", 
+            "pouring": "mdi:weather-pouring",
+            "rainy": "mdi:weather-rainy",
+            "snowy": "mdi:weather-snowy",
+            "snowy-heavy": "mdi:weather-snowy-heavy",
+            "snowy-rainy": "mdi:weather-snowy-rainy",
+            "sunny": "mdi:weather-sunny",
+            "tornado":"mdi:weather-tornado",
+            "windy":  "mdi:weather-windy",
+            "windy-variant": "mdi:weather-windy-variant",
+          };
+          const weatherIconsNight = {
+            ...weatherIconsDay,
+            clear: "mdi:weather-night",
+            sunny: "mdi:weather-night",
+            partlycloudy: "mdi:weather-night-partly-cloudy",
+          };
+          var condition = states[variables.var_weather_entity].state;
+          if (states['sun.sun'] === 'above_horizon') {
+            var weather_icon = weatherIconsDay[condition]; 
+          } else {
+            var weather_icon = weatherIconsDay[condition]; 
+          }
+          
+          if (typeof(weather_icon) === 'undefined') { 
+            var weather_icon = "mdi:help" 
+          }   
+          return `${weather_icon}` 
+        ]]]
+  body_template:
+    show_state: false
+    show_icon: false
+    show_name: false
+    triggers_update: all
+    tap_action:
+      action: call-service
+      service: python_script.set_state
+      service_data:
+        entity_id: '[[[ return variables.var_assistsat_entity ]]]'
+        mode: hold
+    double_tap_action:
+      action: call-service
+      service: python_script.set_state
+      service_data:
+        entity_id: '[[[ return variables.var_assistsat_entity ]]]'
+        mode: normal
+    hold_action:
+      action: call-service
+      service: switch.toggle
+      service_data:
+        entity_id: '[[[ return variables.var_mic_switch ]]]'
+    aspect_ratio: 2/1
+    styles:
+      grid:
+        - grid-template-areas: |
+            "title status"  
+            "message message"
+            "assist assist"        
+        - grid-template-rows: min-content 4fr min-content
+        - grid-template-columns: 1fr 1fr
+        - row-gap: .5rem
+      card:
+        - min-height: 100vh
+        - background-color: '#059bf1'
+        - background-size: cover
+        - border-radius: 0px
+        - overflow: hidden
+        - color: white
+        - font-family: '"Roboto", sans-serif'
+        - font-weight: 300
+      custom_fields:
+        status:
+          - justify-self: end
+          - align-self: start
+          - z-index: 2
+          - font-size: 200%
+          - font-weight: 400
+          - width: max-content
+          - margin-top: '-10%'
+        assist:
+          - justify-self: end
+          - height: 10px
+          - position: absolute
+          - width: 100%
+          - z-index: 2
+          - top: 95%
+          - animation: >-
+              [[[ if (variables.var_assisting == "true") return "pulse 2s
+              infinite"; else return "" ]]]
+          - height: 10px
+    extra_styles: |
+      @keyframes pulse {
+        0%, 100% {
+          background-color: #f56a3f;
+        }
+        50% {
+          background-color: #9e42b0;
+        }
+      }      
+    custom_fields:
+      assist: ''
+      status:
+        card:
+          type: custom:button-card
+          styles:
+            grid:
+              - grid-template-areas: |
+                  "mediaplayer mic hold dnd control"
+              - grid-template-rows: min-content
+              - grid-template-columns: 1fr 1fr 1fr 1fr 1fr
+            card:
+              - background-color: transparent
+              - border-width: 0px
+            custom_fields:
+              mediaplayer:
+                - position: relative
+                - display: >-
+                    [[[ if (variables.var_mediaplayer_mute === "true") return
+                    "block"; else return "none"; ]]]
+              mic:
+                - position: relative
+                - display: >-
+                    [[[ if (variables.var_mic_mute === "off") return "block";
+                    else return "none"; ]]]
+              hold:
+                - position: relative
+                - display: >-
+                    [[[ if
+                    (hass.states[variables.var_assistsat_entity].attributes.mode
+                    === "hold") return "block"; else return "none";
+                    ]]]               
+              dnd:
+                - position: relative
+                - display: >-
+                    [[[ if
+                    (hass.states[variables.var_assistsat_entity].attributes.do_not_disturb
+                    === true) return "block"; else return "none";
+                    ]]]                                
+          custom_fields:
+            mediaplayer:
+              card:
+                type: custom:button-card
+                icon: mdi:volume-off
+                show_name: false
+                color_type: card
+                styles:
+                  card:
+                    - background-color: transparent
+                    - border-width: 0px
+                  icon:
+                    - color: white
+                    - height: 90%
+                tap_action:
+                  action: call-service
+                  service: media_player.volume_mute
+                  service_data:
+                    entity_id: '[[[ return variables.var_mediaplayer_device ]]]'
+                    is_volume_muted: false
+            mic:
+              card:
+                type: custom:button-card
+                show_name: false
+                color_type: card
+                styles:
+                  card:
+                    - background-color: transparent
+                    - border-width: 0px
+                  icon:
+                    - color: white
+                    - height: 90%
+                tap_action:
+                  action: call-service
+                  service: homeassistant.turn_on
+                  service_data:
+                    entity_id: '[[[ return variables.var_mic_device ]]]'
+            hold:
+              card:
+                type: custom:button-card
+                icon: mdi:hand-back-left
+                show_name: false
+                color_type: card
+                styles:
+                  card:
+                    - background-color: transparent
+                    - border-width: 0px
+                  icon:
+                    - color: white
+                    - height: 90%
+                tap_action:
+                  action: call-service
+                  service: python_script.set_state
+                  service_data:
+                    mode: normal
+                    entity_id: '[[[ return variables.var_assistsat_entity ]]]'
+            dnd:
+              card:
+                type: custom:button-card
+                icon: mdi:minus-circle
+                show_name: false
+                color_type: card
+                styles:
+                  card:
+                    - background-color: transparent
+                    - border-width: 0px
+                  icon:
+                    - color: white
+                    - height: 90%
+                tap_action:
+                  action: call-service
+                  service: python_script.set_state
+                  service_data:
+                    do_not_disturb: false
+                    entity_id: '[[[ return variables.var_assistsat_entity ]]]'
+            control:
+              card:
+                type: custom:button-card
+                icon: mdi:home
+                show_name: false
+                color_type: card
+                styles:
+                  card:
+                    - background-color: transparent
+                    - border-width: 0px
+                  name:
+                    - font-size: 600%
+                    - color: white
+                  icon:
+                    - color: white
+                    - height: 90%
+                tap_action:
+                  action: navigate
+                  navigation_path: /dashboard-viewassist/control
+views:
+  - title: HOME
+    path: home
+    type: custom:grid-layout
+    cards:
+      - type: custom:button-card
+        variables:
+          background: /local/viewassist/pinkbluesky.jpg
+          clockcardversion: 1.0.0
+        template:
+          - variable_template
+          - body_template
+        styles:
+          grid:
+            - grid-template-areas: |
+                "title status"
+                "title none"
+                "time time"
+                "date date"
+                "assist assist"
+            - grid-template-rows: min-content min-content min-content min-content min-content
+            - grid-template-columns: 1fr 1fr
+          card:
+            - background: >-
+                [[[ return `center / cover no-repeat
+                url(${variables.background})` ]]]
+            - background-size: cover
+          custom_fields:
+            time:
+              - justify-self: center
+              - z-index: 2
+              - font-size: 2000%
+              - font-weight: bold
+              - position: absolute
+              - color: white
+            date:
+              - justify-self: center
+              - align-self: center
+              - z-index: 2
+              - font-size: 500%
+              - width: max-content
+              - position: absolute
+              - top: 75%
+            night:
+              - position: absolute
+              - min-height: 200%
+              - width: 200%
+              - backdrop-filter: brightness(10%)
+              - overflow: hidden
+              - display: >-
+                  [[[ if
+                  (hass.states[variables.var_assistsat_entity].attributes.mode
+                  === "night") return "block"; else return "none"; ]]]      
+              - z-index: 3
+        custom_fields:
+          title:
+            card:
+              type: custom:button-card
+              icon: '[[[ return variables.var_weather_icon ]]]'
+              name: '[[[ return variables.var_weather_temperature ]]]'
+              tap_action:
+                action: call-service
+                service: input_text.set_value
+                target:
+                  entity_id: >-
+                    [[[ return
+                    states[variables.var_assistsat_entity].attributes.page_view
+                    ]]]
+                data:
+                  value: weather
+              styles:
+                card:
+                  - background-color: transparent
+                  - border-width: 0px
+                  - width: 50%
+                  - margin-left: 5%
+                  - margin-top: '-5%'
+                grid:
+                  - grid-template-areas: '"i n"'
+                  - grid-template-rows: min-content min-content
+                name:
+                  - font-size: 400%
+                  - color: white
+                icon:
+                  - width: 80%
+                  - color: white
+          time: '[[[ return variables.var_current_time ]]]'
+          date: '[[[ return variables.var_date_short ]]]'
+          night: .
+        visibility:
+          - condition: or
+            conditions:
+              - condition: state
+                entity: input_text.viewscreen_page
+                state: clock
+              - condition: state
+                entity: input_text.viewscreen_page
+                state: all
+      - type: custom:button-card
+        variables:
+          var_forecast_entity: weather.kwaedmon204
+          var_forecast_type: daily
+          weathercardversion: 1.0.2
+        template:
+          - variable_template
+          - body_template
+        styles:
+          grid:
+            - grid-template-areas: |
+                "title status"  
+                "message message"
+                "assist assist"        
+            - grid-template-rows: min-content max-content min-content
+            - grid-template-columns: 1fr 1fr
+          card:
+            - background-color: '#059bf1'
+            - border-width: 0px
+            - border-radius: 0px
+          custom_fields:
+            message:
+              - position: relative
+              - height: 100vdh
+              - text-align: start
+              - text-wrap: wrap
+              - justify-content: center
+              - align-self: center
+              - padding: '-10%'
+        custom_fields:
+          message:
+            card:
+              type: weather-forecast
+              entity: '[[[ return variables.var_forecast_entity ]]]'
+              forecast_type: '[[[ return variables.var_forecast_type ]]]'
+              card_mod:
+                style:
+                  .: |
+                    ha-card { background: #059bf9}
+                    ha-card.type-weather-forecast {
+                      justify-content: start !important;
+                    }
+                    ha-card.type-weather-forecast>div.content {
+                      div {
+                        padding-top: 0px;
+                      }
+                    }
+                    ha-card.type-weather-forecast>div.content {
+                      display: flex;​
+                    }
+                  ha-card.type-weather-forecast>div.content: |
+                    svg {
+                      width: 15vw !important;
+                      height: 15vh !important;
+                      flex: unset !important;
+                    }
+                  ha-card.type-weather-forecast>div.forecast: |
+                    div {
+                      padding-top: 2vh;
+                      font-size: 6vh;
+                      justify-content: space-evenly !important;
+                    }
+                  ha-card.type-weather-forecast>div.content>div.info:
+                    .: |
+                      div.name-state {
+                        display: flex;
+                        flex-direction: column;
+                      }
+                    div.name-state:
+                      .: |
+                        div.state {
+                          font-size: 10vh !important;
+                        }
+                        div.name {
+                          display: none;
+                          max-height: 0px !important;
+                        }
+                    div.temp-attribute: |
+                      .temp {
+                        font-size: 8vh !important;
+                        padding-bottom: 0px;
+                      }
+                      .attribute {
+                        font-size: 5vh !important;
+                        color:  #e1e1e1 !important;
+                      }  
+                      .temp span {
+                        font-size: 7vh !important;
+                        margin-left: -1vh;
+                      }
+                      .templow {
+                        padding-top: 0px;
+                        color: #e1e1e1 !important;
+                        text-align: right;
+                      }
+        visibility:
+          - condition: or
+            conditions:
+              - condition: state
+                entity: input_text.viewscreen_page
+                state: weather
+              - condition: state
+                entity: input_text.viewscreen_page
+                state: all
+      - type: custom:button-card
+        template:
+          - variable_template
+          - body_template
+        styles:
+          grid:
+            - grid-template-areas: |
+                "title status"  
+                "image message"
+                "assist assist"       
+            - grid-template-rows: min-content max-content min-content
+            - grid-template-columns: 1fr 1fr
+          card:
+            - background: >-
+                center / cover no-repeat 
+                url("/local/viewassist/announcebird.png")
+            - background-size: cover
+          custom_fields:
+            image:
+              - align-self: center
+              - justify-self: center
+              - object-fit: contain
+              - width: 75%
+            message:
+              - font-size: '[[[ return variables.var_font_size ]]]'
+              - position: relative
+              - padding: 10px
+              - border-radius: 10px
+              - width: 95%
+              - text-align: start
+              - text-wrap: wrap
+              - justify-content: center
+              - align-self: center
+              - padding: 2%
+        custom_fields:
+          image:
+            card:
+              type: picture
+              image: >-
+                [[[ return
+                states[variables.var_assistsat_entity].attributes.image; ]]]
+          message: '[[[ return variables.var_message ]]]'
+        visibility:
+          - condition: or
+            conditions:
+              - condition: state
+                entity: input_text.viewscreen_page
+                state: infoview
+              - condition: state
+                entity: input_text.viewscreen_page
+                state: all
+      - type: custom:button-card
+        variables:
+          background: /local/viewassist/announcebird.png
+          infocardversion: 1.0.0
+        template:
+          - variable_template
+          - body_template
+        styles:
+          grid:
+            - grid-template-areas: |
+                "title status"  
+                "message message"
+                "assist assist"        
+            - grid-template-rows: min-content 4fr min-content
+            - grid-template-columns: 1fr 1fr
+          card:
+            - background: >-
+                [[[ return `center / cover no-repeat
+                url(${variables.background})` ]]]
+            - background-size: cover
+          custom_fields:
+            message:
+              - font-size: '[[[ return variables.var_font_size ]]]'
+              - position: relative
+              - padding: 20px
+              - border-radius: 10px
+              - width: 85%
+              - text-align: center
+              - text-wrap: wrap
+              - justify-content: center
+              - align-self: center
+              - padding: 5%
+        custom_fields:
+          message: '[[[ return variables.var_message ]]]'
+        cards: []
+        title: info
+        path: info
+        visibility:
+          - condition: or
+            conditions:
+              - condition: state
+                entity: input_text.viewscreen_page
+                state: info
+              - condition: state
+                entity: input_text.viewscreen_page
+                state: all
+      - type: custom:button-card
+        variables:
+          musiccardversion: 1.0.0
+        template:
+          - variable_template
+          - body_template
+        styles:
+          grid:
+            - grid-template-areas: |
+                "title status"
+                "message message"
+                "assist assist"        
+            - grid-template-rows: min-content 4fr min-content
+            - grid-template-columns: 1fr 1fr
+          card:
+            - background-color: black;
+          custom_fields:
+            message:
+              - font-size: '[[[ return variables.var_font_size ]]]'
+              - position: relative
+              - text-align: start
+              - text-wrap: wrap
+              - justify-content: center
+              - align-self: center
+              - padding: 2%
+              - top: '-10vh'
+        custom_fields:
+          title: ''
+          message:
+            card:
+              type: custom:mod-card
+              card:
+                type: custom:mini-media-player
+                entity: '[[[ return variables.var_mediaplayer_device + ''_2'' ]]]'
+                artwork: cover
+                hide:
+                  icon: true
+                  info: false
+                  name: true
+                  volume: false
+                  power: false
+                  progress: true
+                card_mod:
+                  style:
+                    mmp-powerstrip $: |
+                      ha-icon-button {
+                        color: white !important;
+                      }
+                    .: |
+                      ha-card {
+                         --mmp-icon-color: white !important;
+                         --mmp-text-color: white !important;
+                         --mmp-unit: 1 !important;
+                         --mdc-icon-size: 100px  !important;
+                        font-size: 50px !important;
+                        font-weight: bold;
+                        aspect-ratio: 1.60 / 1;
+                        width: 100% !important;
+                           }
+        cards: []
+        visibility:
+          - condition: or
+            conditions:
+              - condition: state
+                entity: input_text.viewscreen_page
+                state: music
+              - condition: state
+                entity: input_text.viewscreen_page
+                state: all
