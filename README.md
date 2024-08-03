@@ -14,7 +14,7 @@ Requirements for using page view on View-Assist
     page_view: "input_text.viewscreen_page"
 
 
-3. kiosk-mode from HACS
+3. Install kiosk-mode from HACS
 
     https://github.com/maykar/kiosk-mode
 
