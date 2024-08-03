@@ -19,11 +19,11 @@ The automation changes the visibility of the different cards.
 
 Automation parts:
 
-    service: input_text.set_value
+  - service: input_text.set_value
     data:
-    value: clock
+      value: info
     target:
-    entity_id: "{{ target_display_page_view }}"
+      entity_id: "{{ target_display_page_view }}"
 
 
 Visibility parts:
