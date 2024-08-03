@@ -9,7 +9,7 @@ Requirements for using page view on View-Assist
     input_text.viewscreen_page
 
 
-2. Add a 'page_view' attribute to the template senor
+2. Add a 'page_view' attribute to the template sensor
 
     page_view: "input_text.viewscreen_page"
 
